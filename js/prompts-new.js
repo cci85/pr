@@ -1952,7 +1952,16 @@ function parseCands(text) {
     secs.push(cur);
     const pick = re => secs.filter(s => re.test(s.head));
     const archSrc = [...pick(/變數/).map(s => "## 變數\n" + s.lines.join("\n")), ...pick(/路徑|假說/).map(s => "## 路徑\n" + s.lines.join("\n"))].join("\n");
-    const A = parseArch(archSrc);
+    let A = parseArch(archSrc);
+    if (!A.edges.length && !A.mods.length) {   // 路徑一節缺漏或格式不符時，改從其他各節的「H1（A → B）」「H8（Z × A → B）」讀取路徑
+      const hp = [], seen = new Set();
+      part.replace(/\*\*/g, "").replace(/(H\d+)\s*[（(]\s*([^（）()\n]+?)\s*(?:→|->)\s*([^（）()\n]+?)\s*[）)]/g, (all, id, a, b) => {
+        const m = a.match(/^(.+?)\s*[×xX＊*]\s*(.+)$/), ok = n => A.vars.some(v => v.key === archKey(n.trim()));   // 只接受變數一節已列出的變數
+        if (seen.has(id) || !ok(b) || !(m ? ok(m[1]) && ok(m[2]) : ok(a))) return all; seen.add(id);
+        hp.push(m ? `${id}｜${m[1].trim()} × （${m[2].trim()} → ${b.trim()}）｜未標示` : `${id}｜${a.trim()} → ${b.trim()}｜未標示`);
+        return all; });
+      if (hp.length) A = parseArch(archSrc + "\n## 路徑\n" + hp.join("\n"));
+    }
     const reason = secs.filter(s => s.head && !/^(變數|路徑|假說)/.test(s.head)).map(s => `【${s.head}】\n${s.lines.join("\n").trim()}`).join("\n\n");
     return { title, A, reason, fresh: A.vars.filter(v => /新增/.test(v.frames)).map(v => dgLabel(v.name)[0]) };
   }).filter(c => c.A.vars.length);
