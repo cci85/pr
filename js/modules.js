@@ -688,6 +688,7 @@ const DEFS = {
         build: p => { const { xs, ys } = mechXY(p); return xs.length && ys.length ? T.ask_mech({ x: xs.join("、"), y: ys.join("、"), ctx: (p.as_ctx || "").trim() }) + citeText() : ""; } },
       { id: "am_reply", type: "textarea", label: "篩選的 AI 回覆", hint: "貼上後按下方「重新帶入」，AI 建議的中介與調節變數會出現在勾選清單，並標示判定", rows: 5,
         reseed: { note: "把篩選結果加入勾選清單，並跳到清單位置", jump: "pick-as_pick" }, when: p => isOn(p.am_on) },
+      { id: "am_mview", type: "cands", label: "", when: p => isOn(p.am_on) && !blank(p.am_reply), render: p => mFold(p.am_reply, "篩選") },
       { id: "as_sugg", type: "cands", label: "步驟 1 建議的研究架構", hint: "依步驟 1「提出候選研究架構」的 AI 回覆畫出；按「套用為草圖」會勾選該架構的變數，並把路徑畫到下方「我的草圖」，可再修改", render: () => renderSuggest(), choose: i => useSuggest(i) },
       { id: "as_diag", type: "diagram", label: "我的草圖", hint: "選填。畫了路徑的話，會列為「候選架構一（我的版本）」。拖曳方塊調整位置；點一個方塊再點另一個方塊，畫出箭頭；先點調節變數再點一條箭頭，畫出調節虛線；未選方塊時點箭頭或虛線可刪除",
         tray: true, all: p => mixPicked(p, true), source: p => mixPicked(p),
@@ -695,6 +696,7 @@ const DEFS = {
       { id: "cf_n", type: "radio", label: "候選架構數量", options: [["2", "2 個"], ["3", "3 個"], ["4", "4 個"]], value: "3" },
       { id: "cf_reply", type: "textarea", afterOut: true, label: "候選架構的 AI 回覆", hint: "整段貼上；下方會畫出每個候選架構", rows: 6 },
       { id: "cf_view", type: "cands", afterOut: true, label: "比較候選架構", hint: "比較各架構的圖與理由，按「選這個」設為你的研究架構", render: p => renderCands(p), choose: i => chooseCand(i) },
+      { id: "cf_mview", type: "cands", afterOut: true, label: "", when: p => !blank(p.cf_reply), render: p => mFold(p.cf_reply, "候選架構") },
       { id: "fin_diag", type: "diagram", afterOut: true, label: "選定的研究架構", hint: "可在圖上微調：點一個方塊再點另一個方塊加上箭頭；未選方塊時點箭頭可刪除；按「依文字重畫」回到 AI 的版本",
         when: p => !blank(store.values.cf_text), emptyHint: "（尚未選定）",
         source: p => parseArch(store.values.cf_text).vars,
@@ -1538,6 +1540,11 @@ function secondView(text) {
     <p><button type="button" class="copy" data-copytext="${esc(t)}">② 複製第二則 Prompt</button></p></div>`;
 }
 
+// 0.2 回覆中的「變數定義與衡量」：收合顯示，點開看理論定義、量表出處與代表題項
+function mFold(t, what) {
+  const x = deLatex(String(t || "")), n = parseMeasures(x).length; if (!n) return "";
+  return `<details class="qlist"><summary><b>${what}回覆的變數定義與衡量（${n} 個變數）</b>　點開查看理論定義、量表出處與代表題項</summary>${measureView(x, "")}</details>`;
+}
 function measureView(text, nextHint) {
   if (blank(text)) return "";
   const vs = parseMeasures(text);
