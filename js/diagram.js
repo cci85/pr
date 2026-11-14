@@ -31,6 +31,13 @@ function dgAutoPos(vars, pos, force) {
   });
   groups.mod.forEach((v, i) => { if (force || !pos[v.key]) pos[v.key] = { x: DG.W * (i + 1) / (groups.mod.length + 1), y: 55 }; });
   groups.ctrl.forEach((v, i) => { if (force || !pos[v.key]) pos[v.key] = { x: DG.W * (i + 1) / (groups.ctrl.length + 1), y: DG.H - 35 }; });
+  if (!force) {   // 新加入的方塊與既有方塊重疊時往下移
+    const placed = vars.filter(v => pos[v.key]);
+    vars.forEach(v => {
+      const q = pos[v.key]; if (!q) return; let n = 0;
+      while (n++ < 12 && placed.some(o => o !== v && Math.abs(pos[o.key].x - q.x) < 120 && Math.abs(pos[o.key].y - q.y) < 50)) q.y = q.y + 60 > DG.H - 30 ? 80 : q.y + 60;
+    });
+  }
 }
 
 // 欄位有 seed（由文字解析出的箭頭）時：文字內容變動才依文字重設箭頭，否則保留圖上的手動修改
@@ -164,6 +171,11 @@ const dgSel = {};
 function renderDiagram(f, p) {
   const box = $("diag-" + f.id); if (!box) return;
   const vars = f.source(p), d = dgSeed(f, p);
+  if (f.seed) {   // 依文字畫出的圖：變數或角色改變時重新排列，避免新變數落在舊位置上、被其他方塊蓋住
+    const vk = vars.map(v => v.key + ":" + v.role).sort().join("|");
+    if (d.vk !== undefined && d.vk !== vk) d.pos = {};
+    d.vk = vk;
+  }
   dgAutoPos(vars, d.pos, false);
   if (f.tray) renderTray(f, p, d);
   if (!vars.length) { box.innerHTML = `<p class="hint">${esc(d.tray.length ? "（所有變數都在待選區）" : f.emptyHint || "（勾選變數後，這裡會出現方塊）")}</p>`; return; }
