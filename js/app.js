@@ -90,7 +90,8 @@ function migrateQuick() {
 }
 migrateQuick();
 if (!ALL_SECS.some(s => s.id === store.sec)) store.sec = "s0-1";
-const save = () => { try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} if (window.onStoreSave) window.onStoreSave(); };
+let syncing = false;   // 由其他分頁同步進來時不回寫，避免兩個分頁互相觸發
+const save = () => { if (syncing) return; try { localStorage.setItem(KEY, JSON.stringify(store)); } catch {} if (window.onStoreSave) window.onStoreSave(); };
 
 const sec = () => ALL_SECS.find(s => s.id === store.sec);
 const steps = () => stepsOf(sec());
@@ -751,3 +752,12 @@ $("pane").addEventListener("click", async e => {
   const t = b.textContent; b.textContent = "已複製，可貼到 Word"; setTimeout(() => { b.textContent = t; }, 1500);
 });
 
+// 同時開了兩個分頁時：另一個分頁存檔後，這裡改用最新內容重畫（保留這個分頁目前所在的節與步驟），避免舊分頁的內容覆蓋新的修改
+window.addEventListener("storage", e => {
+  if (e.key !== KEY || !e.newValue) return;
+  try {
+    const s = JSON.parse(e.newValue), sec = store.sec, st = { ...store.step }, y = window.scrollY;
+    store = Object.assign({ values: {}, rules: {}, replies: {}, name: "", sec: "s0-1", step: {} }, s, { sec, step: { ...(s.step || {}), [sec]: st[sec] ?? (s.step || {})[sec] } });
+    syncing = true; showAll(); window.scrollTo(0, y);
+  } catch {} finally { syncing = false; }
+});

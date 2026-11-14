@@ -1581,13 +1581,13 @@ function parseArch(text) {
       const m = c.match(/^(.+?)\s*[×xX＊*]\s*[（(]\s*(.+?)\s*(?:→|->)\s*(.+?)\s*[）)]\s*$/);
       if (m) {
         const z = addVar(m[1].trim()), a = addVar(m[2].trim()), b = addVar(m[3].trim());
-        if (z && a && b) mods.push({ id, from: z, edge: a + ">" + b, dir });
+        if (z && a && b && !mods.some(x => x.from === z && x.edge === a + ">" + b)) mods.push({ id, from: z, edge: a + ">" + b, dir });   // 同一路徑只列一次
         return;
       }
       const e = c.split(/\s*(?:→|->)\s*/).map(s => s.trim()).filter(Boolean);
       for (let i = 0; i + 1 < e.length; i++) {   // A → B → C 拆成兩條
         const a = addVar(e[i]), b = addVar(e[i + 1]);
-        if (a && b) edges.push({ id: e.length > 2 ? "" : id, from: a, to: b, dir: e.length > 2 ? "" : dir });
+        if (a && b && a !== b && !edges.some(x => x.from === a && x.to === b)) edges.push({ id: e.length > 2 ? "" : id, from: a, to: b, dir: e.length > 2 ? "" : dir });
       }
       return;
     }
